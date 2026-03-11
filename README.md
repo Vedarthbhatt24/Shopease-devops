@@ -1,5 +1,5 @@
 # ShopEase - DevOps Internship Project
-### Vedarth Bhatt | Enrollment: 2201201138 | KSET, KPGU | 2024-25
+### Vedarth Bhatt | KSET, KPGU | 2025-26
 
 ---
 
