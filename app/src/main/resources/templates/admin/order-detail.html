@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+<meta charset="UTF-8"/><title>Order Detail - Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0f0f0f;--accent:#e85d26;--muted:#6b6b6b;--border:#e8e5de;--sidebar:#1a1a2e}
+body{font-family:'DM Sans',sans-serif;background:#f4f5f7;display:flex;min-height:100vh}
+.sidebar{width:240px;background:var(--sidebar);color:#fff;padding:2rem 1.5rem;flex-shrink:0}
+.sidebar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:2rem}
+.sidebar-logo span{color:var(--accent)}
+.sidebar a{display:flex;align-items:center;gap:.75rem;color:#ccc;text-decoration:none;padding:.6rem .75rem;border-radius:8px;font-size:.9rem;margin-bottom:.25rem}
+.sidebar a:hover,.sidebar a.active{background:rgba(255,255,255,.1);color:#fff}
+.sidebar a.active{background:var(--accent);color:#fff}
+.main{flex:1;padding:2rem}
+.page-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:2rem}
+.flash{background:#d4edda;border:1px solid #c3e6cb;color:#155724;padding:.75rem 1rem;border-radius:8px;margin-bottom:1.5rem;font-size:.9rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);padding:1.5rem}
+.card h3{font-family:'Syne',sans-serif;font-weight:700;margin-bottom:1rem;font-size:1rem}
+.info-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f5f5f5;font-size:.9rem}
+.info-row:last-child{border:none}
+.info-label{color:var(--muted)}
+.badge{padding:.25rem .7rem;border-radius:100px;font-size:.8rem;font-weight:600}
+.PENDING{background:#fff3cd;color:#856404}
+.CONFIRMED{background:#cfe2ff;color:#084298}
+.SHIPPED{background:#d1ecf1;color:#0c5460}
+.DELIVERED{background:#d4edda;color:#155724}
+.CANCELLED{background:#f8d7da;color:#721c24}
+table{width:100%;border-collapse:collapse}
+th{padding:.6rem 1rem;text-align:left;font-size:.8rem;color:var(--muted);font-weight:500;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:.7rem 1rem;border-bottom:1px solid #f5f5f5;font-size:.9rem}
+.total-row td{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--accent)}
+.status-form{display:flex;gap:.75rem;align-items:center;margin-top:1rem}
+select{padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif}
+.btn{padding:.5rem 1.2rem;background:var(--ink);color:#fff;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:600;cursor:pointer;font-size:.9rem}
+.btn:hover{background:var(--accent)}
+.back{color:var(--accent);text-decoration:none;font-size:.9rem;display:inline-block;margin-bottom:1rem}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo">Shop<span>Ease</span></div>
+  <a href="/admin">📊 Dashboard</a>
+  <a href="/admin/products">📦 Products</a>
+  <a href="/admin/orders" class="active">📋 Orders</a>
+  <a href="/" target="_blank">🛒 View Store</a>
+  <a href="/logout">🚪 Logout</a>
+</div>
+<div class="main">
+  <a href="/admin/orders" class="back">← Back to Orders</a>
+  <div class="page-title">Order #<span th:text="${order.id}"></span></div>
+  <div th:if="${message}" class="flash" th:text="${message}"></div>
+  <div class="grid">
+    <div class="card">
+      <h3>Customer Info</h3>
+      <div class="info-row"><span class="info-label">Name</span><span th:text="${order.customerName}"></span></div>
+      <div class="info-row"><span class="info-label">Email</span><span th:text="${order.customerEmail}"></span></div>
+      <div class="info-row"><span class="info-label">Address</span><span th:text="${order.shippingAddress}"></span></div>
+    </div>
+    <div class="card">
+      <h3>Order Info</h3>
+      <div class="info-row"><span class="info-label">Order Date</span><span th:text="${#temporals.format(order.orderDate,'dd MMM yyyy, hh:mm a')}"></span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="badge" th:classappend="${order.status.name()}" th:text="${order.status}"></span></div>
+      <div class="info-row"><span class="info-label">Total</span><strong>₹<span th:text="${#numbers.formatDecimal(order.totalAmount,1,'COMMA',0,'POINT')}"></span></strong></div>
+      <form class="status-form" th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post">
+        <select name="status">
+          <option th:each="s : ${T(com.vedu.shop.model.Order.OrderStatus).values()}" th:value="${s}" th:text="${s}" th:selected="${s == order.status}"></option>
+        </select>
+        <button type="submit" class="btn">Update</button>
+      </form>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Order Items</h3>
+    <table>
+      <thead><tr><th>Product</th><th>Unit Price</th><th>Quantity</th><th>Subtotal</th></tr></thead>
+      <tbody>
+        <tr th:each="item : ${order.items}">
+          <td th:text="${item.product.name}"></td>
+          <td>₹<span th:text="${#numbers.formatDecimal(item.unitPrice,1,'COMMA',0,'POINT')}"></span></td>
+          <td th:text="${item.quantity}"></td>
+          <td>₹<span th:text="${#numbers.formatDecimal(item.subtotal,1,'COMMA',0,'POINT')}"></span></td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3" style="text-align:right">Total:</td>
+          <td>₹<span th:text="${#numbers.formatDecimal(order.totalAmount,1,'COMMA',0,'POINT')}"></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

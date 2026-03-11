@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+<meta charset="UTF-8"/><title>Order Placed! - ShopEase</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#fafaf7;color:#0f0f0f;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:#fff;border-radius:16px;padding:3rem;text-align:center;max-width:500px;box-shadow:0 8px 32px rgba(0,0,0,.08)}
+.icon{font-size:4rem;margin-bottom:1rem}
+h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;margin-bottom:.5rem}
+p{color:#6b6b6b;margin-bottom:.5rem}
+.order-id{background:#f0f9f0;border:1px solid #86efac;border-radius:8px;padding:.75rem 1rem;margin:1.5rem 0;font-size:.9rem;color:#166534}
+.total{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:700;color:#e85d26;margin-bottom:1.5rem}
+.links{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+a{padding:.6rem 1.5rem;border-radius:8px;text-decoration:none;font-family:'Syne',sans-serif;font-weight:600;font-size:.9rem}
+.btn-primary{background:#0f0f0f;color:#fff}
+.btn-outline{background:#fff;color:#0f0f0f;border:1.5px solid #e8e5de}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🎉</div>
+  <h1>Order Placed!</h1>
+  <p>Thank you for shopping with ShopEase.</p>
+  <div class="order-id">Order ID: <strong>#<span th:text="${orderId}">12345</span></strong></div>
+  <div class="total">₹<span th:text="${#numbers.formatDecimal(orderTotal,1,'COMMA',0,'POINT')}">0</span></div>
+  <p style="font-size:.85rem;color:#888">A confirmation has been noted. You can track your order below.</p>
+  <div class="links" style="margin-top:1.5rem">
+    <a href="/" class="btn-primary">Continue Shopping</a>
+    <a href="/track-order" class="btn-outline">Track Order</a>
+  </div>
+</div>
+</body>
+</html>

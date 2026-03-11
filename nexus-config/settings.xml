@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven settings.xml
+  Place this file at: C:\Users\<your-username>\.m2\settings.xml (Windows)
+  This configures Maven to use your local Nexus as proxy and for deployments
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.2.0 https://maven.apache.org/xsd/settings-1.2.0.xsd">
+
+  <!-- Nexus credentials for deploying artifacts -->
+  <servers>
+    <server>
+      <id>nexus-releases</id>
+      <username>admin</username>
+      <password>admin123</password>
+    </server>
+    <server>
+      <id>nexus-snapshots</id>
+      <username>admin</username>
+      <password>admin123</password>
+    </server>
+  </servers>
+
+  <!-- Route all Maven downloads through Nexus proxy -->
+  <mirrors>
+    <mirror>
+      <id>nexus-central</id>
+      <mirrorOf>central</mirrorOf>
+      <url>http://localhost:8081/repository/maven-public/</url>
+    </mirror>
+  </mirrors>
+
+  <profiles>
+    <profile>
+      <id>nexus</id>
+      <repositories>
+        <repository>
+          <id>nexus-public</id>
+          <url>http://localhost:8081/repository/maven-public/</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+      </repositories>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>nexus</activeProfile>
+  </activeProfiles>
+
+</settings>

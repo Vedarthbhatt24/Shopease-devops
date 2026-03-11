@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+<meta charset="UTF-8"/><title>Admin Login - ShopEase</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#0f0f0f;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:#fff;border-radius:16px;padding:3rem;width:100%;max-width:400px}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;text-align:center;margin-bottom:.5rem}
+.logo span{color:#e85d26}
+.subtitle{text-align:center;color:#6b6b6b;font-size:.9rem;margin-bottom:2rem}
+.form-group{margin-bottom:1.2rem}
+label{display:block;font-size:.85rem;font-weight:500;color:#444;margin-bottom:.4rem}
+input{width:100%;padding:.75rem 1rem;border:1.5px solid #e8e5de;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1rem}
+input:focus{outline:none;border-color:#0f0f0f}
+.btn{width:100%;padding:1rem;background:#0f0f0f;color:#fff;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;margin-top:.5rem}
+.btn:hover{background:#e85d26}
+.error{background:#fee;border:1px solid #fca;color:#c00;padding:.7rem;border-radius:8px;margin-bottom:1rem;font-size:.85rem;text-align:center}
+.hint{text-align:center;font-size:.8rem;color:#aaa;margin-top:1rem}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Shop<span>Ease</span></div>
+  <div class="subtitle">Admin Panel Login</div>
+  <div th:if="${param.error}" class="error">Invalid username or password.</div>
+  <form th:action="@{/login}" method="post">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" name="username" placeholder="admin" required/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="••••••••" required/>
+    </div>
+    <button type="submit" class="btn">Login to Admin →</button>
+  </form>
+  <div class="hint">Default: admin / admin123 &nbsp;|&nbsp; <a href="/" style="color:#888">Back to Store</a></div>
+</div>
+</body>
+</html>

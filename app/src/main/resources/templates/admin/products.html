@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+<meta charset="UTF-8"/><title>Products - Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0f0f0f;--accent:#e85d26;--muted:#6b6b6b;--border:#e8e5de;--sidebar:#1a1a2e}
+body{font-family:'DM Sans',sans-serif;background:#f4f5f7;color:var(--ink);display:flex;min-height:100vh}
+.sidebar{width:240px;background:var(--sidebar);color:#fff;padding:2rem 1.5rem;flex-shrink:0}
+.sidebar-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.4rem;margin-bottom:2rem}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:#666;margin-bottom:.75rem;margin-top:1.5rem}
+.sidebar a{display:flex;align-items:center;gap:.75rem;color:#ccc;text-decoration:none;padding:.6rem .75rem;border-radius:8px;font-size:.9rem;margin-bottom:.25rem}
+.sidebar a:hover,.sidebar a.active{background:rgba(255,255,255,.1);color:#fff}
+.sidebar a.active{background:var(--accent);color:#fff}
+.main{flex:1;padding:2rem}
+.page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem}
+.page-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800}
+.btn-new{background:var(--ink);color:#fff;padding:.6rem 1.2rem;border-radius:8px;text-decoration:none;font-family:'Syne',sans-serif;font-weight:600;font-size:.9rem}
+.btn-new:hover{background:var(--accent)}
+.flash{background:#d4edda;border:1px solid #c3e6cb;color:#155724;padding:.75rem 1rem;border-radius:8px;margin-bottom:1.5rem;font-size:.9rem}
+.card{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{padding:.75rem 1rem;text-align:left;font-size:.8rem;color:var(--muted);font-weight:500;text-transform:uppercase;border-bottom:1px solid var(--border);background:#fafafa}
+td{padding:.85rem 1rem;border-bottom:1px solid #f5f5f5;font-size:.9rem;vertical-align:middle}
+td img{width:48px;height:48px;object-fit:cover;border-radius:6px}
+.btn-edit{color:var(--accent);text-decoration:none;font-size:.85rem;font-weight:500;margin-right:.5rem}
+.btn-delete{background:none;border:1px solid #ddd;color:#c00;padding:.25rem .6rem;border-radius:4px;cursor:pointer;font-size:.8rem}
+.inactive{opacity:.5}
+.stock-badge{padding:.2rem .6rem;border-radius:100px;font-size:.75rem;font-weight:600}
+.in-stock{background:#d4edda;color:#155724}
+.low-stock{background:#fff3cd;color:#856404}
+.out-stock{background:#f8d7da;color:#721c24}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo">Shop<span>Ease</span></div>
+  <div class="sidebar-label">Main</div>
+  <a href="/admin">📊 Dashboard</a>
+  <a href="/admin/products" class="active">📦 Products</a>
+  <a href="/admin/orders">📋 Orders</a>
+  <div class="sidebar-label">Store</div>
+  <a href="/" target="_blank">🛒 View Store</a>
+  <a href="/logout">🚪 Logout</a>
+</div>
+<div class="main">
+  <div class="page-header">
+    <div class="page-title">Products</div>
+    <a href="/admin/products/new" class="btn-new">+ Add Product</a>
+  </div>
+  <div th:if="${message}" class="flash" th:text="${message}"></div>
+  <div class="card">
+    <table>
+      <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        <tr th:each="p : ${products}" th:classappend="${!p.active} ? 'inactive'">
+          <td><img th:src="${p.imageUrl}" th:alt="${p.name}" onerror="this.src='https://via.placeholder.com/48?text=?'"/></td>
+          <td th:text="${p.name}"></td>
+          <td th:text="${p.category}"></td>
+          <td>₹<span th:text="${#numbers.formatDecimal(p.price,1,'COMMA',0,'POINT')}"></span></td>
+          <td>
+            <span class="stock-badge in-stock" th:if="${p.stock > 5}" th:text="${p.stock}"></span>
+            <span class="stock-badge low-stock" th:if="${p.stock > 0 and p.stock <= 5}" th:text="${p.stock}"></span>
+            <span class="stock-badge out-stock" th:if="${p.stock == 0}">Out</span>
+          </td>
+          <td><span th:text="${p.active} ? 'Active' : 'Inactive'" th:style="${p.active} ? 'color:green' : 'color:red'"></span></td>
+          <td>
+            <a th:href="@{/admin/products/edit/{id}(id=${p.id})}" class="btn-edit">Edit</a>
+            <form th:action="@{/admin/products/delete/{id}(id=${p.id})}" method="post" style="display:inline" onsubmit="return confirm('Delete this product?')">
+              <button type="submit" class="btn-delete">Delete</button>
+            </form>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

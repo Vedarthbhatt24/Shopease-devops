@@ -1,0 +1,201 @@
+---
+# ShopEase - Windows Server 2022 + IIS Deployment Playbook
+# Deploys Spring Boot app behind IIS reverse proxy
+#
+# Run: ansible-playbook deploy-iis.yml -i inventory/hosts-windows.ini
+#
+# How it works:
+#   IIS (port 80) --> reverse proxy --> Spring Boot JAR (port 8080)
+#   Browser hits IIS on port 80, IIS forwards to Java app on 8080
+
+- name: Deploy ShopEase on Windows Server 2022 with IIS
+  hosts: windows
+  vars:
+    app_name: shopease
+    app_port: 8080
+    app_dir: 'C:\apps\shopease'
+    jar_name: shopease.jar
+    iis_site_name: ShopEase
+    iis_port: 80
+
+  tasks:
+
+    # ── 1. Ensure app directory exists ────────────────────────────────────
+    - name: Create application directory
+      win_file:
+        path: "{{ app_dir }}"
+        state: directory
+
+    # ── 2. Stop running app if already running ────────────────────────────
+    - name: Stop existing ShopEase process (if running)
+      win_shell: |
+        $proc = Get-Process -Name java -ErrorAction SilentlyContinue
+        if ($proc) { Stop-Process -Name java -Force }
+      ignore_errors: yes
+
+    # ── 3. Copy JAR to Windows Server ────────────────────────────────────
+    - name: Copy ShopEase JAR to server
+      win_copy:
+        src: "target/shopease.jar"
+        dest: "{{ app_dir }}\\{{ jar_name }}"
+
+    # ── 4. Install IIS + required features ───────────────────────────────
+    - name: Install IIS Web Server
+      win_feature:
+        name:
+          - Web-Server
+          - Web-WebSockets
+          - Web-Http-Redirect
+          - Web-Static-Content
+          - Web-Default-Doc
+          - Web-Http-Errors
+          - Web-Http-Logging
+          - Web-Mgmt-Console
+        state: present
+      register: iis_install
+
+    - name: Reboot if IIS installation requires it
+      win_reboot:
+      when: iis_install.reboot_required
+
+    # ── 5. Install URL Rewrite Module (needed for reverse proxy) ──────────
+    - name: Download IIS URL Rewrite Module
+      win_get_url:
+        url: https://download.microsoft.com/download/1/2/8/128E2E22-C1B9-44A4-BE2A-5859ED1D4592/rewrite_amd64_en-US.msi
+        dest: 'C:\Windows\Temp\rewrite.msi'
+
+    - name: Install URL Rewrite Module
+      win_package:
+        path: 'C:\Windows\Temp\rewrite.msi'
+        state: present
+
+    # ── 6. Install Application Request Routing (ARR) for reverse proxy ───
+    - name: Download ARR (Application Request Routing)
+      win_get_url:
+        url: https://download.microsoft.com/download/E/9/8/E9849D6A-020E-47E4-9FD0-A023E99B54EB/requestRouter_amd64.msi
+        dest: 'C:\Windows\Temp\arr.msi'
+
+    - name: Install ARR
+      win_package:
+        path: 'C:\Windows\Temp\arr.msi'
+        state: present
+
+    # ── 7. Enable proxy in IIS ────────────────────────────────────────────
+    - name: Enable IIS proxy feature
+      win_shell: |
+        Import-Module WebAdministration
+        Set-WebConfigurationProperty -pspath 'MACHINE/WEBROOT/APPHOST' `
+          -filter "system.webServer/proxy" -name "enabled" -value "True"
+      ignore_errors: yes
+
+    # ── 8. Create IIS website for ShopEase ───────────────────────────────
+    - name: Remove default IIS website
+      win_iis_website:
+        name: "Default Web Site"
+        state: absent
+      ignore_errors: yes
+
+    - name: Create ShopEase website directory
+      win_file:
+        path: 'C:\inetpub\shopease'
+        state: directory
+
+    - name: Create ShopEase IIS website
+      win_iis_website:
+        name: "{{ iis_site_name }}"
+        state: started
+        port: "{{ iis_port }}"
+        physical_path: 'C:\inetpub\shopease'
+        application_pool: "{{ iis_site_name }}Pool"
+
+    # ── 9. Write web.config (IIS reverse proxy config) ───────────────────
+    - name: Deploy web.config for reverse proxy to Spring Boot
+      win_copy:
+        dest: 'C:\inetpub\shopease\web.config'
+        content: |
+          <?xml version="1.0" encoding="UTF-8"?>
+          <configuration>
+            <system.webServer>
+              <rewrite>
+                <rules>
+                  <rule name="ReverseProxy-ShopEase" stopProcessing="true">
+                    <match url="(.*)" />
+                    <action type="Rewrite"
+                            url="http://localhost:{{ app_port }}/{R:1}" />
+                  </rule>
+                </rules>
+              </rewrite>
+              <httpErrors existingResponse="PassThrough" />
+            </system.webServer>
+          </configuration>
+
+    # ── 10. Create Windows Service to run Spring Boot JAR ────────────────
+    - name: Remove old ShopEase service if exists
+      win_service:
+        name: ShopEaseApp
+        state: absent
+      ignore_errors: yes
+
+    - name: Download NSSM (tool to run JAR as Windows service)
+      win_get_url:
+        url: https://nssm.cc/release/nssm-2.24.zip
+        dest: 'C:\Windows\Temp\nssm.zip'
+
+    - name: Extract NSSM
+      win_unzip:
+        src: 'C:\Windows\Temp\nssm.zip'
+        dest: 'C:\tools\'
+
+    - name: Install ShopEase as Windows service using NSSM
+      win_shell: |
+        $nssm = 'C:\tools\nssm-2.24\win64\nssm.exe'
+        & $nssm install ShopEaseApp "java" "-jar {{ app_dir }}\{{ jar_name }} --server.port={{ app_port }}"
+        & $nssm set ShopEaseApp AppDirectory "{{ app_dir }}"
+        & $nssm set ShopEaseApp DisplayName "ShopEase Spring Boot App"
+        & $nssm set ShopEaseApp Description "ShopEase E-Commerce Application"
+
+    # ── 11. Start Spring Boot app service ────────────────────────────────
+    - name: Start ShopEase Windows service
+      win_service:
+        name: ShopEaseApp
+        state: started
+        start_mode: auto
+
+    # ── 12. Open Windows Firewall ports ──────────────────────────────────
+    - name: Open port 80 in Windows Firewall (IIS)
+      win_firewall_rule:
+        name: "ShopEase IIS Port 80"
+        localport: 80
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+        enabled: yes
+
+    - name: Open port 8080 in Windows Firewall (Spring Boot)
+      win_firewall_rule:
+        name: "ShopEase App Port 8080"
+        localport: 8080
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+        enabled: yes
+
+    # ── 13. Restart IIS to apply all config ──────────────────────────────
+    - name: Restart IIS (iisreset)
+      win_shell: iisreset /restart
+
+    # ── 14. Wait and verify ───────────────────────────────────────────────
+    - name: Wait 45 seconds for Spring Boot to start
+      wait_for:
+        timeout: 45
+
+    - name: Deployment complete!
+      debug:
+        msg: |
+          ✅ ShopEase deployed on Windows Server 2022!
+          🌐 App URL (via IIS):  http://{{ ansible_host }}/
+          🔧 Direct Spring Boot: http://{{ ansible_host }}:8080/
+          🏢 IIS Manager:        Open on Windows Server VM
+          📋 Windows Service:    ShopEaseApp (auto-starts on reboot)

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+<meta charset="UTF-8"/><title>Checkout - ShopEase</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--ink:#0f0f0f;--accent:#e85d26;--muted:#6b6b6b;--border:#e8e5de}
+body{font-family:'DM Sans',sans-serif;background:#fafaf7;color:var(--ink)}
+nav{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem}
+.nav-inner{max-width:1200px;margin:auto;display:flex;align-items:center;height:64px}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.5rem;color:var(--ink);text-decoration:none}
+.logo span{color:var(--accent)}
+.section{max-width:600px;margin:3rem auto;padding:0 2rem}
+h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;margin-bottom:2rem}
+.form-group{margin-bottom:1.5rem}
+label{display:block;font-size:.9rem;font-weight:500;margin-bottom:.4rem;color:var(--muted)}
+input,textarea{width:100%;padding:.75rem 1rem;border:1.5px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1rem;background:#fff;transition:border-color .2s}
+input:focus,textarea:focus{outline:none;border-color:var(--ink)}
+.error-msg{background:#fee;border:1px solid #fca;color:#c00;padding:.75rem;border-radius:8px;margin-bottom:1rem;font-size:.9rem}
+.btn{width:100%;padding:1rem;background:var(--ink);color:#fff;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--accent)}
+</style>
+</head>
+<body>
+<nav><div class="nav-inner"><a href="/" class="logo">Shop<span>Ease</span></a></div></nav>
+<div class="section">
+  <h1>Checkout</h1>
+  <div th:if="${error}" class="error-msg" th:text="${error}"></div>
+  <form th:action="@{/checkout/place}" method="post">
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" name="name" required placeholder="Your full name"/>
+    </div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" name="email" required placeholder="your@email.com"/>
+    </div>
+    <div class="form-group">
+      <label>Shipping Address</label>
+      <textarea name="address" rows="3" required placeholder="Full shipping address with PIN code"></textarea>
+    </div>
+    <button type="submit" class="btn">Place Order →</button>
+  </form>
+</div>
+</body>
+</html>

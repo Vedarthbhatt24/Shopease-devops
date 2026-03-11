@@ -1,0 +1,141 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven-3.9'
+        jdk 'JDK-17'
+    }
+
+    environment {
+        APP_NAME      = 'shopease'
+        VERSION       = '1.0.0'
+        NEXUS_URL     = 'http://localhost:8081'
+        SONAR_URL     = 'http://localhost:9000'
+        DEPLOY_SERVER = '192.168.56.101'   // <-- Change to your Linux VM IP
+        JAR_FILE      = 'target/shopease.jar'
+    }
+
+    stages {
+
+        // ─── STAGE 1: CHECKOUT ───────────────────────────────────────────────
+        stage('Checkout') {
+            steps {
+                echo '=== Stage 1: Checkout Source Code ==='
+                git branch: 'main',
+                    url: 'https://github.com/YOUR_USERNAME/shopease-devops.git'
+                    // Replace with your GitHub repo URL
+                echo "Build: ${BUILD_NUMBER} | Branch: ${GIT_BRANCH} | Commit: ${GIT_COMMIT[0..7]}"
+            }
+        }
+
+        // ─── STAGE 2: BUILD ──────────────────────────────────────────────────
+        stage('Build') {
+            steps {
+                echo '=== Stage 2: Maven Build ==='
+                sh 'mvn clean compile -DskipTests'
+            }
+        }
+
+        // ─── STAGE 3: UNIT TESTS ─────────────────────────────────────────────
+        stage('Unit Tests') {
+            steps {
+                echo '=== Stage 3: Run Unit Tests ==='
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        // ─── STAGE 4: CODE QUALITY ANALYSIS ──────────────────────────────────
+        stage('SonarQube Analysis') {
+            steps {
+                echo '=== Stage 4: SonarQube Static Code Analysis ==='
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                        mvn sonar:sonar \
+                          -Dsonar.projectKey=shopease \
+                          -Dsonar.projectName='ShopEase E-Commerce' \
+                          -Dsonar.host.url=${SONAR_URL} \
+                          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                    """
+                }
+            }
+        }
+
+        // ─── STAGE 5: QUALITY GATE ───────────────────────────────────────────
+        stage('Quality Gate') {
+            steps {
+                echo '=== Stage 5: Waiting for SonarQube Quality Gate ==='
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        // ─── STAGE 6: PACKAGE ────────────────────────────────────────────────
+        stage('Package') {
+            steps {
+                echo '=== Stage 6: Maven Package - Build WAR artifact ==='
+                sh 'mvn package -DskipTests'
+                echo "WAR file size: $(du -sh ${JAR_FILE})"
+                archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+            }
+        }
+
+        // ─── STAGE 7: PUBLISH TO NEXUS ───────────────────────────────────────
+        stage('Publish to Nexus') {
+            steps {
+                echo '=== Stage 7: Upload artifact to Nexus Repository ==='
+                nexusArtifactUploader(
+                    nexusVersion: 'nexus3',
+                    protocol: 'http',
+                    nexusUrl: 'localhost:8081',
+                    groupId: 'com.vedu',
+                    version: "${VERSION}-build-${BUILD_NUMBER}",
+                    repository: 'maven-releases',
+                    credentialsId: 'nexus-credentials',
+                    artifacts: [
+                        [
+                            artifactId: 'shopease',
+                            classifier: '',
+                            file: "${JAR_FILE}",
+                            type: 'war'
+                        ]
+                    ]
+                )
+            }
+        }
+
+        // ─── STAGE 8: DEPLOY WITH ANSIBLE ────────────────────────────────────
+        stage('Deploy') {
+            steps {
+                echo '=== Stage 8: Deploy with Ansible ==='
+                sh """
+                    ansible-playbook ansible/deploy.yml \
+                      -i ansible/inventory/hosts.ini \
+                      --extra-vars "war_file=${JAR_FILE} app_version=${VERSION}-build-${BUILD_NUMBER}" \
+                      -v
+                """
+            }
+        }
+
+    }
+
+    // ─── POST ACTIONS ─────────────────────────────────────────────────────────
+    post {
+        success {
+            echo "✅ Pipeline SUCCESS - Build #${BUILD_NUMBER} deployed!"
+            echo "🌐 App URL: http://${DEPLOY_SERVER}:8080/shopease"
+        }
+        failure {
+            echo "❌ Pipeline FAILED - Build #${BUILD_NUMBER}"
+        }
+        always {
+            echo "Pipeline finished. Status: ${currentBuild.currentResult}"
+            cleanWs()
+        }
+    }
+}
